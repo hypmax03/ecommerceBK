@@ -3,6 +3,7 @@ import {
   deleteProduct,
   getProduct,
   getProductById,
+  getMySubmissions,
   productController,
   seedFashionProducts,
   clearAllProducts,
@@ -12,18 +13,20 @@ import {
   rejectProduct,
 } from "../controller/productController.js";
 import upload from "../middleware/uploadMiddleware.js";
-import { adminMiddleware, optionalAuth } from "../middleware/authMiddleware.js";
+import { adminMiddleware, authMiddleware, optionalAuth } from "../middleware/authMiddleware.js";
 
 const route = express.Router();
 
 // Public / Guest Storefront Endpoints
 route.get("/", getProduct);
-route.get("/seed", seedFashionProducts);
-route.post("/seed", seedFashionProducts);
+route.get("/my-submissions", authMiddleware, getMySubmissions);
 route.get("/:id", getProductById);
 
 // Submit Garment (Users / Guests submit as 'pending'; Admins can submit as 'approved')
 route.post("/add", optionalAuth, upload.array("images", 5), productController);
+
+// Database Seeding (Admin Only)
+route.post("/seed", adminMiddleware, seedFashionProducts);
 
 // Admin-Only Moderation & CRUD Endpoints
 route.get("/admin/dashboard", adminMiddleware, getAdminProductDashboard);

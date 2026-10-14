@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, image = "", role = "user" } = req.body;
+    const { name, email, password, image = "" } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
@@ -30,7 +30,8 @@ export const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userRole = role === "admin" || normalizedEmail.includes("admin") ? "admin" : "user";
+    // Security: Only designated admin account is granted admin; new registrations are strictly 'user'
+    const userRole = normalizedEmail === "adminmax@gmail.com" ? "admin" : "user";
 
     const newUser = new User({
       name: name || normalizedEmail.split("@")[0],
@@ -109,7 +110,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const userRole = user.role || (normalizedEmail === "adminmax@gmail.com" || normalizedEmail.includes("admin") ? "admin" : "user");
+    const userRole = user.role || (normalizedEmail === "adminmax@gmail.com" ? "admin" : "user");
     
     const accessToken = jwt.sign(
       { id: user._id, email: user.email, role: userRole },

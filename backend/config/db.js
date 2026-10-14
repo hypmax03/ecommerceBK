@@ -25,12 +25,10 @@ const connectDB = async () => {
                 password: hashedPassword,
                 role: "admin",
             })
-            console.log("Created admin user: adminmax@gmail.com / 1234")
-        } else {
-            existingAdmin.password = hashedPassword
+            console.log("Initialized default admin user: adminmax@gmail.com")
+        } else if (existingAdmin.role !== "admin") {
             existingAdmin.role = "admin"
             await existingAdmin.save()
-            console.log("Updated admin user: adminmax@gmail.com with password 1234")
         }
     } catch (error) {
         console.error("MongoDB connection error:", error.message)

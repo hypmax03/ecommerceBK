@@ -81,8 +81,7 @@ export const productController = async (req, res) => {
     // All user submissions are strictly initialized as 'pending' for Admin approval.
     const isAdmin =
       req.user?.role === "admin" ||
-      req.user?.email?.toLowerCase() === "adminmax@gmail.com" ||
-      req.user?.email?.toLowerCase().includes("admin");
+      req.user?.email?.toLowerCase() === "adminmax@gmail.com";
     const productStatus = isAdmin ? (req.body.status || "approved") : "pending";
 
     const product = {
@@ -150,6 +149,39 @@ export const getProduct = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Server error fetching products",
+      error: error.message,
+    });
+  }
+};
+
+export const getMySubmissions = async (req, res) => {
+  try {
+    const userEmail = req.user?.email?.toLowerCase();
+    const userName = req.user?.name;
+
+    if (!userEmail) {
+      return res.status(401).json({ message: "Authentication required to view your submissions" });
+    }
+
+    const orConditions = [
+      { "submittedBy.email": { $regex: new RegExp(`^${userEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") } }
+    ];
+    if (userName) {
+      orConditions.push({
+        "submittedBy.name": { $regex: new RegExp(`^${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") }
+      });
+    }
+
+    const submissions = await Product.find({ $or: orConditions }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "User submissions fetched successfully",
+      count: submissions.length,
+      submissions,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error fetching user submissions",
       error: error.message,
     });
   }

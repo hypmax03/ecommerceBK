@@ -68,14 +68,14 @@ export const adminMiddleware = async (req, res, next) => {
     );
 
     // Verify role in token or database
-    if (decoded.role === 'admin' || decoded.email?.toLowerCase() === 'adminmax@gmail.com' || decoded.email?.toLowerCase().includes('admin')) {
+    if (decoded.role === 'admin' || decoded.email?.toLowerCase() === 'adminmax@gmail.com') {
       req.user = decoded;
       return next();
     }
 
     // Double-check with database for safety
     const dbUser = await User.findById(decoded.id);
-    if (dbUser && (dbUser.role === 'admin' || dbUser.email?.toLowerCase() === 'adminmax@gmail.com' || dbUser.email?.toLowerCase().includes('admin'))) {
+    if (dbUser && (dbUser.role === 'admin' || dbUser.email?.toLowerCase() === 'adminmax@gmail.com')) {
       req.user = { id: dbUser._id, email: dbUser.email, role: 'admin' };
       return next();
     }
