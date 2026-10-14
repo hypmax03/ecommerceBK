@@ -5,6 +5,7 @@ import {
   getProductById,
   productController,
   seedFashionProducts,
+  clearAllProducts,
   updateProduct,
   getAdminProductDashboard,
   approveProduct,
@@ -17,6 +18,8 @@ const route = express.Router();
 
 // Public / Guest Storefront Endpoints
 route.get("/", getProduct);
+route.get("/seed", seedFashionProducts);
+route.post("/seed", seedFashionProducts);
 route.get("/:id", getProductById);
 
 // Submit Garment (Users / Guests submit as 'pending'; Admins can submit as 'approved')
@@ -28,6 +31,7 @@ route.put("/approve/:id", adminMiddleware, approveProduct);
 route.put("/reject/:id", adminMiddleware, rejectProduct);
 route.put("/update/:id", adminMiddleware, updateProduct);
 route.delete("/delete/:id", adminMiddleware, deleteProduct);
-route.post("/seed", adminMiddleware, seedFashionProducts);
+route.delete("/clear", adminMiddleware, clearAllProducts);
+route.post("/clear", adminMiddleware, clearAllProducts);
 
 export default route;

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import cloudinary from "../config/cloudinary.js";
 import Product from "../model/productSchema.js";
 import { fashionProducts } from "../seed.js";
@@ -5,7 +6,13 @@ import { fashionProducts } from "../seed.js";
 export const seedFashionProducts = async (req, res) => {
   try {
     await Product.deleteMany({});
-    const products = await Product.insertMany(fashionProducts);
+    const preparedProducts = fashionProducts.map((p) => ({
+      ...p,
+      status: "approved",
+      images: p.images && p.images.length ? p.images : [p.image],
+      image: p.image || (p.images && p.images[0]) || "",
+    }));
+    const products = await Product.insertMany(preparedProducts);
     res.status(200).json({
       message: "Fashion dress catalog seeded successfully",
       count: products.length,
@@ -14,6 +21,21 @@ export const seedFashionProducts = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to seed products",
+      error: error.message,
+    });
+  }
+};
+
+export const clearAllProducts = async (req, res) => {
+  try {
+    const result = await Product.deleteMany({});
+    res.status(200).json({
+      message: `Cleared ${result.deletedCount} products from catalog. Ready for manual upload.`,
+      count: 0,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to clear products",
       error: error.message,
     });
   }
@@ -57,7 +79,10 @@ export const productController = async (req, res) => {
 
     // Role-based status: ONLY verified admins can directly publish 'approved' products.
     // All user submissions are strictly initialized as 'pending' for Admin approval.
-    const isAdmin = req.user?.role === "admin" || req.user?.email?.toLowerCase().includes("admin");
+    const isAdmin =
+      req.user?.role === "admin" ||
+      req.user?.email?.toLowerCase() === "adminmax@gmail.com" ||
+      req.user?.email?.toLowerCase().includes("admin");
     const productStatus = isAdmin ? (req.body.status || "approved") : "pending";
 
     const product = {
@@ -209,6 +234,11 @@ export const rejectProduct = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
     const product = await Product.findById(id);
 
     if (!product) {

@@ -43,6 +43,10 @@ const productSchema = new mongoose.Schema(
       required: true,
       default: 1,
     },
+    image: {
+      type: String,
+      default: "",
+    },
     images: [
       {
         type: String,
@@ -60,6 +64,15 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Ensure image and images are in sync
+productSchema.pre("save", function () {
+  if (this.images && this.images.length > 0 && !this.image) {
+    this.image = this.images[0];
+  } else if (this.image && (!this.images || this.images.length === 0)) {
+    this.images = [this.image];
+  }
+});
 
 const Product = mongoose.model("Product", productSchema);
 

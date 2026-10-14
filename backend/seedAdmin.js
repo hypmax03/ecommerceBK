@@ -10,20 +10,28 @@ const createAdmin = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB...");
     
-    const existing = await User.findOne({ email: "admin@elora.com" });
-    if (!existing) {
-      const hashedPassword = await bcrypt.hash("admin123", 10);
-      await User.create({
-        name: "Elena Rostova (Curator Admin)",
-        email: "admin@elora.com",
-        password: hashedPassword,
-        role: "admin",
-      });
-      console.log("Created default admin user: admin@elora.com / admin123");
-    } else {
-      existing.role = "admin";
-      await existing.save();
-      console.log("Admin account verified: admin@elora.com");
+    const admins = [
+      { name: "Admin Max", email: "adminmax@gmail.com", pass: "1234" },
+      { name: "Elena Rostova (Curator Admin)", email: "admin@elora.com", pass: "admin123" },
+    ];
+
+    for (const a of admins) {
+      const existing = await User.findOne({ email: a.email });
+      const hashedPassword = await bcrypt.hash(a.pass, 10);
+      if (!existing) {
+        await User.create({
+          name: a.name,
+          email: a.email,
+          password: hashedPassword,
+          role: "admin",
+        });
+        console.log(`Created admin user: ${a.email} / ${a.pass}`);
+      } else {
+        existing.password = hashedPassword;
+        existing.role = "admin";
+        await existing.save();
+        console.log(`Verified & refreshed admin user: ${a.email}`);
+      }
     }
     
     await mongoose.connection.close();

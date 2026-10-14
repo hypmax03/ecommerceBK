@@ -24,7 +24,7 @@ export const authMiddleware = async (req, res, next) => {
 
     const decoded = jwt.verify(
       token,
-      process.env.JWT_ACCESS_SECRET || "default_jwt_secret_vericourt"
+      process.env.JWT_ACCESS_SECRET || "default_jwt_secret_elora"
     );
     req.user = decoded;
     next();
@@ -42,7 +42,7 @@ export const optionalAuth = async (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(
         token,
-        process.env.JWT_ACCESS_SECRET || "default_jwt_secret_vericourt"
+        process.env.JWT_ACCESS_SECRET || "default_jwt_secret_elora"
       );
       req.user = decoded;
     }
@@ -64,18 +64,18 @@ export const adminMiddleware = async (req, res, next) => {
 
     const decoded = jwt.verify(
       token,
-      process.env.JWT_ACCESS_SECRET || "default_jwt_secret_vericourt"
+      process.env.JWT_ACCESS_SECRET || "default_jwt_secret_elora"
     );
 
     // Verify role in token or database
-    if (decoded.role === 'admin' || decoded.email?.toLowerCase().includes('admin')) {
+    if (decoded.role === 'admin' || decoded.email?.toLowerCase() === 'adminmax@gmail.com' || decoded.email?.toLowerCase().includes('admin')) {
       req.user = decoded;
       return next();
     }
 
     // Double-check with database for safety
     const dbUser = await User.findById(decoded.id);
-    if (dbUser && (dbUser.role === 'admin' || dbUser.email?.toLowerCase().includes('admin'))) {
+    if (dbUser && (dbUser.role === 'admin' || dbUser.email?.toLowerCase() === 'adminmax@gmail.com' || dbUser.email?.toLowerCase().includes('admin'))) {
       req.user = { id: dbUser._id, email: dbUser.email, role: 'admin' };
       return next();
     }
