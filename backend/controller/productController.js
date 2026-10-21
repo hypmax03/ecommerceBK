@@ -154,6 +154,35 @@ export const getProduct = async (req, res) => {
   }
 };
 
+export const getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let product = null;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      product = await Product.findById(id);
+    } else {
+      product = await Product.findOne({
+        $or: [{ _id: id }, { name: id }],
+      });
+    }
+
+    if (!product) {
+      return res.status(404).json({ message: "Product docket not found" });
+    }
+
+    res.status(200).json({
+      message: "Product docket fetched successfully",
+      product,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error fetching product docket",
+      error: error.message,
+    });
+  }
+};
+
 export const getMySubmissions = async (req, res) => {
   try {
     const userEmail = req.user?.email?.toLowerCase();
@@ -258,34 +287,6 @@ export const rejectProduct = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Server error rejecting product",
-      error: error.message,
-    });
-  }
-};
-
-export const getProductById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-    const product = await Product.findById(id);
-
-    if (!product) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-
-    res.status(200).json({
-      message: "Product fetched successfully",
-      product,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Server error",
       error: error.message,
     });
   }
