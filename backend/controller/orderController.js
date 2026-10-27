@@ -1,22 +1,8 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
-import Razorpay from "razorpay";
+import razorpay from "../config/razorpay.js";
 import Order from "../model/orderSchema.js";
 import Product from "../model/productSchema.js";
-
-const getRazorpayInstance = () => {
-  const key_id = process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY;
-  const key_secret = process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET;
-
-  if (!key_id || !key_secret) {
-    return null;
-  }
-
-  return new Razorpay({
-    key_id,
-    key_secret,
-  });
-};
 
 export const createOrder = async (req, res) => {
   try {
@@ -36,15 +22,21 @@ export const createOrder = async (req, res) => {
       paymentMethod = "card",
     } = req.body;
 
-    if (!clientName || !clientAddress || !items || !Array.isArray(items) || items.length === 0) {
+    if (
+      !clientName ||
+      !clientAddress ||
+      !items ||
+      !Array.isArray(items) ||
+      items.length === 0
+    ) {
       return res.status(400).json({
-        message: "Client name, address, and at least one item are required to place an order.",
+        message:
+          "Client name, address, and at least one item are required to place an order.",
       });
     }
 
     const docketId =
-      orderDocketId ||
-      `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
+      orderDocketId || `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const sanitizedItems = items.map((item) => ({
       productId: mongoose.Types.ObjectId.isValid(item.id || item._id)
@@ -66,7 +58,10 @@ export const createOrder = async (req, res) => {
             $inc: { stock: -Math.max(1, item.quantity) },
           });
         } catch (stockErr) {
-          console.warn(`Could not update stock for product ${item.productId}:`, stockErr.message);
+          console.warn(
+            `Could not update stock for product ${item.productId}:`,
+            stockErr.message,
+          );
         }
       }
     }
@@ -83,7 +78,9 @@ export const createOrder = async (req, res) => {
       subtotal: Number(subtotal) || 0,
       discountAmount: Number(discountAmount) || 0,
       shipping: Number(shipping) || 0,
-      grandTotal: Number(grandTotal) || Number(subtotal) - Number(discountAmount) + Number(shipping),
+      grandTotal:
+        Number(grandTotal) ||
+        Number(subtotal) - Number(discountAmount) + Number(shipping),
       promo: promo || { code: "", label: "" },
       orderNote: orderNote || "",
       paymentMethod: paymentMethod || "card",
@@ -106,15 +103,26 @@ export const createOrder = async (req, res) => {
 
 export const getMyOrders = async (req, res) => {
   try {
-    const userEmail = req.user?.email?.toLowerCase();
-    const userId = req.user?.id;
+    const userEmail = req.user?.email?.toLowerCase()?.trim();
+    const rawUserId = req.user?.id || req.user?._id;
 
     const query = {
       $or: [],
     };
 
-    if (userId) query.$or.push({ user: userId });
-    if (userEmail) query.$or.push({ clientEmail: userEmail });
+    if (rawUserId) {
+      if (mongoose.Types.ObjectId.isValid(rawUserId)) {
+        query.$or.push({ user: new mongoose.Types.ObjectId(rawUserId) });
+      }
+      query.$or.push({ user: rawUserId });
+    }
+    if (userEmail) {
+      query.$or.push({ clientEmail: userEmail });
+      const escapedEmail = userEmail.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+      query.$or.push({
+        clientEmail: { $regex: new RegExp(`^${escapedEmail}$`, "i") },
+      });
+    }
 
     if (query.$or.length === 0) {
       return res.status(200).json({ orders: [] });
@@ -155,7 +163,10 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const order = await Order.findOne({
-      $or: [{ orderDocketId: id }, { _id: mongoose.Types.ObjectId.isValid(id) ? id : null }],
+      $or: [
+        { orderDocketId: id },
+        { _id: mongoose.Types.ObjectId.isValid(id) ? id : null },
+      ],
     });
 
     if (!order) {
@@ -177,13 +188,20 @@ export const createRazorpayOrder = async (req, res) => {
     const numericAmount = Math.round(Number(amount));
 
     if (!numericAmount || numericAmount <= 0) {
-      return res.status(400).json({ message: "Valid order amount is required" });
+      return res
+        .status(400)
+        .json({ message: "Valid order amount is required" });
     }
 
-    const docketId = receipt || `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
-    const rzp = getRazorpayInstance();
+    const docketId =
+      receipt || `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    if (rzp) {
+
+
+
+
+
+    
       const options = {
         amount: Math.round(numericAmount * 100), // amount in paise
         currency: "INR",
@@ -195,7 +213,7 @@ export const createRazorpayOrder = async (req, res) => {
         },
       };
 
-      const razorpayOrder = await rzp.orders.create(options);
+      const razorpayOrder = await razorpay.orders.create(options);
 
       return res.status(200).json({
         success: true,
@@ -205,19 +223,14 @@ export const createRazorpayOrder = async (req, res) => {
         keyId: process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY,
         docketId,
       });
-    } else {
-      console.warn("Razorpay credentials not found in environment. Providing test order for sandbox.");
-      const mockOrderId = `order_test_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-      return res.status(200).json({
-        success: true,
-        orderId: mockOrderId,
-        amount: Math.round(numericAmount * 100),
-        currency: "INR",
-        keyId: process.env.RAZORPAY_KEY_ID || "rzp_test_elora_sandbox",
-        docketId,
-        isSandbox: true,
-      });
-    }
+
+
+
+
+
+
+
+
   } catch (error) {
     console.error("Razorpay order creation error:", error);
     res.status(500).json({
@@ -237,12 +250,20 @@ export const verifyRazorpayPayment = async (req, res) => {
     } = req.body;
 
     if (!orderDetails) {
-      return res.status(400).json({ message: "Order details required for verification" });
+      return res
+        .status(400)
+        .json({ message: "Order details required for verification" });
     }
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET;
+    const keySecret =
+      process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET;
 
-    if (keySecret && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
+    if (
+      keySecret &&
+      razorpay_signature &&
+      razorpay_order_id &&
+      razorpay_payment_id
+    ) {
       const body = `${razorpay_order_id}|${razorpay_payment_id}`;
       const expectedSignature = crypto
         .createHmac("sha256", keySecret)
@@ -274,8 +295,7 @@ export const verifyRazorpayPayment = async (req, res) => {
     } = orderDetails;
 
     const docketId =
-      orderDocketId ||
-      `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
+      orderDocketId || `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const sanitizedItems = (items || []).map((item) => ({
       productId: mongoose.Types.ObjectId.isValid(item.id || item._id)
@@ -296,7 +316,10 @@ export const verifyRazorpayPayment = async (req, res) => {
             $inc: { stock: -Math.max(1, item.quantity) },
           });
         } catch (stockErr) {
-          console.warn(`Could not update stock for product ${item.productId}:`, stockErr.message);
+          console.warn(
+            `Could not update stock for product ${item.productId}:`,
+            stockErr.message,
+          );
         }
       }
     }
@@ -312,7 +335,9 @@ export const verifyRazorpayPayment = async (req, res) => {
       subtotal: Number(subtotal) || 0,
       discountAmount: Number(discountAmount) || 0,
       shipping: Number(shipping) || 0,
-      grandTotal: Number(grandTotal) || Number(subtotal) - Number(discountAmount) + Number(shipping),
+      grandTotal:
+        Number(grandTotal) ||
+        Number(subtotal) - Number(discountAmount) + Number(shipping),
       promo: promo || { code: "", label: "" },
       orderNote: orderNote || "",
       paymentMethod: "razorpay",
@@ -325,7 +350,8 @@ export const verifyRazorpayPayment = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Razorpay payment verified and order docket recorded successfully",
+      message:
+        "Razorpay payment verified and order docket recorded successfully",
       order: newOrder,
     });
   } catch (error) {
@@ -336,4 +362,3 @@ export const verifyRazorpayPayment = async (req, res) => {
     });
   }
 };
-
