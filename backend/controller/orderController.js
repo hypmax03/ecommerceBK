@@ -196,41 +196,31 @@ export const createRazorpayOrder = async (req, res) => {
     const docketId =
       receipt || `ELO-${Math.floor(100000 + Math.random() * 900000)}`;
 
-
-
-
-
-
-    
-      const options = {
-        amount: Math.round(numericAmount * 100), // amount in paise
-        currency: "INR",
-        receipt: docketId,
-        notes: {
-          docketId,
-          clientName: notes.clientName || "",
-          clientEmail: notes.clientEmail || "",
-        },
-      };
-
-      const razorpayOrder = await razorpay.orders.create(options);
-
-      return res.status(200).json({
-        success: true,
-        orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        keyId: process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY,
+    const options = {
+      amount: Math.round(numericAmount * 100), // amount in paise
+      currency: "INR",
+      receipt: docketId,
+      notes: {
         docketId,
-      });
+        clientName: notes.clientName || "",
+        clientEmail: notes.clientEmail || "",
+      },
+    };
 
+    const razorpayOrder = await razorpay.orders.create(options);
 
-
-
-
-
-
-
+    return res.status(200).json({
+      success: true,
+      orderId: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      keyId:
+        process.env.RAZORPAY_KEY_ID ||
+        process.env.RAZORPAY_KEY ||
+        "rzp_test_TrEB2gTkre3jX2",
+      docketId,
+      isSandbox: false,
+    });
   } catch (error) {
     console.error("Razorpay order creation error:", error);
     res.status(500).json({
@@ -256,7 +246,10 @@ export const verifyRazorpayPayment = async (req, res) => {
     }
 
     const keySecret =
-      process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET;
+      process.env.RAZORPAY_KEY_SECRET ||
+      process.env.RAZORPAY_KEY_SECERET ||
+      process.env.RAZORPAY_SECRET ||
+      "uOlD79mMgsK6YlXYMp5ss3tH";
 
     if (
       keySecret &&
